@@ -22,7 +22,7 @@
 
 	
 //week 6 different operation choice
-   int choice = 7;
+int choice = 7;
 //Week4 Task5 & Week5 global values
 bool AnimationSwitch = true ;  // switch for animation 
 
@@ -43,7 +43,7 @@ glm::mat3 orientation = glm::mat3(1.0, 0.0, 0.0,                                
 	); 
 
 glm::vec3 cameraPosition = glm::vec3(0.0, 0.0, 4.0) ; //4,0  
-                             
+             
 float focalLength= 2.0 ;  
 	               //2.0
 
@@ -684,7 +684,7 @@ std::vector<Colour> readMTLMaterialFile(const std::string& fileName) {
 	   
 		glm::vec3 cameraToVertex =  cameraPosition - vertexPosition   ;
 
-		glm::vec3 adjustedvertex =  cameraToVertex * orientation   ;   //results corrected vector giving direction of artefact(w.r.t to orientation of camera)
+		glm::vec3 adjustedvertex = cameraToVertex *  orientation   ;   //results corrected vector giving direction of artefact(w.r.t to orientation of camera)
 
 				// std::cout << "1(" << cameraToVertex.x << "," << cameraToVertex.y <<"," << cameraToVertex.z << ")" << std::endl ;
 				// std::cout << "2(" << adjustedvertex.x << "," << adjustedvertex.y <<"," << adjustedvertex.z << ")" << std::endl ;
@@ -904,17 +904,6 @@ void lookAt(glm::vec3 lookatPoint){
 }
 
 
-void lookAtRayTracing(glm::vec3 lookatPoint){
-		glm::vec3 scalingCamera ;
-				scalingCamera.x = cameraPosition.x * HEIGHT/2 + WIDTH/2 ;
-				scalingCamera.y = cameraPosition.y * HEIGHT/2 + HEIGHT/2 ;
-				scalingCamera.z = cameraPosition.z * HEIGHT/2 ;
-     glm::vec3 forward = glm::normalize(scalingCamera - lookatPoint) ;
-	 glm::vec3 right = glm::normalize(glm::cross(glm::vec3(0.0,1.0,0.0) , forward)) ;
-	 glm::vec3 up = glm::normalize(glm::cross(forward, right)) ;
-	//  orientationRayTracing = glm::mat3(right, up ,forward) ;
-}
-
 // -------------------------------------------------------------------------------------------------------------------------------------------
 //Week7 Ray Tracing and Shadows
 RayTriangleIntersection getClosestIntersection(glm::vec3 startPosition , glm::vec3 rayDirection ,std::vector<ModelTriangle> ModelTriangles, size_t indexIgnored){
@@ -968,14 +957,14 @@ glm::vec3 v4(0.650989,2.739334,0.532032) ;
 glm::vec3 lightSource= v4 +v2;
 
 lightSource.x = lightSource.x /2 * 0.35 * HEIGHT/2 + WIDTH/2;
-lightSource.y =  -lightSource.y /2*  0.35 * HEIGHT/2 + HEIGHT/2;
+lightSource.y = - lightSource.y /2*  0.35 * HEIGHT/2 + HEIGHT/2;
 lightSource.z = lightSource.z /2 * 0.35 * HEIGHT/2 ;	
 //  std::cout << "1(" << lightSource.x <<", " << lightSource.y <<", " <<lightSource.z << " )"<< std::endl; 
 
           for(float y=0 ; y<HEIGHT ; y++)  {
 			 for(float x=0; x <WIDTH ; x++){
-				glm::vec3 fixedCameraPositionToImagePlane = glm::vec3(WIDTH/2, HEIGHT/2, cameraPosition.z *HEIGHT/2);  
-                glm::vec3 rayDirection = glm::normalize(glm::vec3(x ,y ,focalLength*HEIGHT/2) - fixedCameraPositionToImagePlane)* orientation;
+				glm::vec3 fixedCameraPositionToImagePlane = glm::vec3(WIDTH/2, HEIGHT/2, 4*HEIGHT/2);  
+                glm::vec3 rayDirection = orientation * glm::normalize(glm::vec3(x ,y ,focalLength*HEIGHT/2) - fixedCameraPositionToImagePlane);
 				glm::vec3 scalingCamera ;
 				scalingCamera.x = cameraPosition.x * HEIGHT/2 + WIDTH/2 ;
 				scalingCamera.y = cameraPosition.y * HEIGHT/2 + HEIGHT/2 ;
@@ -1324,11 +1313,10 @@ int main(int argc, char *argv[])
 
 		case 7:                   //week6 Task6
 		if(AnimationSwitch){
-		lookAt(glm::vec3(0.0,0.0,0.0));
+			lookAt(glm::vec3(0.0,0.0,0.0));
 		drawWithRayTracing(window, ModelTriangleList) ;
 		}
 		else{
-			
 		    window.clearPixels();
 			drawWithRayTracing(window, ModelTriangleList) ;
 			cameraPosition = mY * cameraPosition ;
