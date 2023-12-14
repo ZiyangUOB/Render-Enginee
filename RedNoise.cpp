@@ -681,25 +681,27 @@ std::vector<Colour> readMTLMaterialFile(const std::string& fileName) {
 
 //Week4 Task5  using  model coordinate system (i.e. origian: centre of the model), z is "out of the screen" (towards you), y towards up, x towards right
 	CanvasPoint getCanvasIntersectionPoint(glm::vec3 cameraPosition, glm::vec3 vertexPosition,float focalLength){
+		vertexPosition.y = -vertexPosition.y ;
 	   
-		glm::vec3 cameraToVertex =  cameraPosition - vertexPosition   ;
+		glm::vec3 cameraToVertex = vertexPosition - cameraPosition   ;
 
 		glm::vec3 adjustedvertex = cameraToVertex *  orientation   ;   //results corrected vector giving direction of artefact(w.r.t to orientation of camera)
 
 				// std::cout << "1(" << cameraToVertex.x << "," << cameraToVertex.y <<"," << cameraToVertex.z << ")" << std::endl ;
 				// std::cout << "2(" << adjustedvertex.x << "," << adjustedvertex.y <<"," << adjustedvertex.z << ")" << std::endl ;
        
-		  float dv = adjustedvertex.z ;    //adjacent disntance between camera and vertix in similar triangle in any diemnsion ;
+		  float dv =  -adjustedvertex.z ;    //adjacent disntance between camera and vertix in similar triangle in any diemnsion ;
+
 		// Working out intersetction point y coordinate in image plane 
 		    float hv = adjustedvertex.y;   //oppsite disntance between camera and vertix in similar triangle in y-z dimension 
 		    float v = round((focalLength * (hv/dv)*(HEIGHT/2))) + (HEIGHT/2);
 
 	    // Working out intersetction point x coordinate in image plane 
 		    float hu = adjustedvertex.x;   //oppsite disntance between camera and vertix in similar triangle x-z dimension
-		    float u = - round(focalLength * (hu/dv)* (HEIGHT/2)) + (WIDTH/2) ;
+		    float u = round(focalLength * (hu/dv)* (HEIGHT/2)) + (WIDTH/2) ;
            
 		// Working out the depth relative to camera
-		   float depth = adjustedvertex.z ;
+		   float depth = -adjustedvertex.z ;
 		   
       
 		return CanvasPoint(u,v,depth) ;
@@ -906,7 +908,7 @@ void lookAt(glm::vec3 lookatPoint){
 
 // -------------------------------------------------------------------------------------------------------------------------------------------
 //Week7 Ray Tracing and Shadows
-RayTriangleIntersection getClosestIntersection(glm::vec3 startPosition , glm::vec3 rayDirection ,std::vector<ModelTriangle> ModelTriangles, size_t indexIgnored){
+RayTriangleIntersection getClosestIntersection(glm::vec3 startPosition , glm::vec3 rayDirection ,std::vector<ModelTriangle> ModelTriangles){
 	
 			float closetDistance = 0 ;     // reciprocal of farest distance ;
 			 RayTriangleIntersection theOne ;
@@ -918,8 +920,8 @@ RayTriangleIntersection getClosestIntersection(glm::vec3 startPosition , glm::ve
 
 //shifting model vertixes 
 for(float j =0 ; j <3 ; j++){
-	triangle.vertices[j].x = triangle.vertices[j].x * HEIGHT/2 + WIDTH/2 ;
-	triangle.vertices[j].y = -triangle.vertices[j].y * HEIGHT/2 + HEIGHT/2;
+	triangle.vertices[j].x =  triangle.vertices[j].x * HEIGHT/2 + WIDTH/2 ;
+	triangle.vertices[j].y = - triangle.vertices[j].y * HEIGHT/2  + HEIGHT/2;
 	triangle.vertices[j].z = triangle.vertices[j].z * HEIGHT/2 ;
 }
 
@@ -928,7 +930,8 @@ for(float j =0 ; j <3 ; j++){
            glm::vec3 SPVector = startPosition - triangle.vertices[0];  //
            glm::mat3 DEMatrix(-rayDirection, e0, e1);
            glm::vec3 possibleSolution = glm::inverse(DEMatrix) * SPVector;  //(t,u,v)
-if(i!= indexIgnored) {
+
+if(possibleSolution.x>1) { // avoid intersection with itself
  if(possibleSolution.x > 0) {  // intersection validation check
     if((possibleSolution.y >= 0.0) && (possibleSolution.y<= 1.0)&&(possibleSolution.z >= 0.0) && (possibleSolution.z<= 1.0) && (possibleSolution.y+ possibleSolution.z) <= 1.0 ) {
       if(1/possibleSolution.x > closetDistance) {
@@ -964,25 +967,35 @@ lightSource.z = lightSource.z /2 * 0.35 * HEIGHT/2 ;
           for(float y=0 ; y<HEIGHT ; y++)  {
 			 for(float x=0; x <WIDTH ; x++){
 				glm::vec3 fixedCameraPositionToImagePlane = glm::vec3(WIDTH/2, HEIGHT/2, 4*HEIGHT/2);  
-                glm::vec3 rayDirection = orientation * glm::normalize(glm::vec3(x ,y ,focalLength*HEIGHT/2) - fixedCameraPositionToImagePlane);
+                glm::vec3 rayDirection = orientation * glm::normalize(glm::vec3(x ,y ,focalLength*HEIGHT/2)-fixedCameraPositionToImagePlane);
 				glm::vec3 scalingCamera ;
 				scalingCamera.x = cameraPosition.x * HEIGHT/2 + WIDTH/2 ;
 				scalingCamera.y = cameraPosition.y * HEIGHT/2 + HEIGHT/2 ;
 				scalingCamera.z = cameraPosition.z * HEIGHT/2 ;
-RayTriangleIntersection ClosetValidIntersection = getClosestIntersection(scalingCamera,rayDirection,ModelTriangleList, -1);
+RayTriangleIntersection ClosetValidIntersection = getClosestIntersection(scalingCamera,rayDirection,ModelTriangleList);
 	       glm::vec3 surfacePoint = ClosetValidIntersection.intersectionPoint ;
-		   glm::vec3 ShadowRay = glm::normalize(lightSource - surfacePoint) ;
-		    RayTriangleIntersection shadowIntersection = getClosestIntersection(surfacePoint, ShadowRay , ModelTriangleList, ClosetValidIntersection.triangleIndex) ;
-// if( shadowIntersection.triangleIndex == 0|| shadowIntersection.triangleIndex ==1) {
-if(shadowIntersection.triangleIndex == -1 || shadowIntersection.triangleIndex == 0|| shadowIntersection.triangleIndex ==1 ||shadowIntersection.triangleIndex == 2||shadowIntersection.triangleIndex == 3||
-shadowIntersection.triangleIndex == 4|| shadowIntersection.triangleIndex == 5|| shadowIntersection.triangleIndex == 8 || shadowIntersection.triangleIndex == 9||
- shadowIntersection.triangleIndex == 11){
+		   glm::vec3 ShadowRay = glm::normalize(surfacePoint- lightSource) ;
+		    RayTriangleIntersection shadowIntersection = getClosestIntersection(lightSource, ShadowRay , ModelTriangleList) ;
+
+if(ClosetValidIntersection.triangleIndex == -1){  //ignore the case where no intersection with triangle 
+	continue;
+}
+
+if(shadowIntersection.triangleIndex == ClosetValidIntersection.triangleIndex){
 	uint32_t colour = (255 << 24) + (ClosetValidIntersection.intersectedTriangle.colour.red << 16) + (ClosetValidIntersection.intersectedTriangle.colour.green << 8) +ClosetValidIntersection.intersectedTriangle.colour.blue;
                        window.setPixelColour(x,y,colour) ;			
 }else{
        	uint32_t colour = (255 << 24) + (ClosetValidIntersection.intersectedTriangle.colour.red/3 << 16) + (ClosetValidIntersection.intersectedTriangle.colour.green/3 << 8) +ClosetValidIntersection.intersectedTriangle.colour.blue/3;
                        window.setPixelColour(x,y,colour) ;			
 }	 
+
+if (ClosetValidIntersection.triangleIndex == 0 || ClosetValidIntersection.triangleIndex ==1){
+	Colour white(255,255,255) ;
+		uint32_t colour = (255 << 24) + (white.red << 16) + (white.green << 8) + white.blue;
+                       window.setPixelColour(x,y,colour) ;		
+
+
+}
 		  }
 }
 }
@@ -1010,13 +1023,13 @@ void handleEvent(SDL_Event event, DrawingWindow &window)
 		else if (event.key.keysym.sym == SDLK_UP){                        // moving cameara up
 		    window.clearPixels();
 			std::cout << "Camera moving up" << std::endl;
-			cameraPosition = cameraPosition + glm::vec3(0.0, 0.1, 0.0) ;
+			cameraPosition = cameraPosition - glm::vec3(0.0, 0.1, 0.0) ;
 			lookAt(glm::vec3(0.0,0.0,0.0));
 			}
 		else if (event.key.keysym.sym == SDLK_DOWN){                      // moving cameara down
 		    window.clearPixels();
 			std::cout << "Camera moving down" << std::endl;
-			cameraPosition = cameraPosition - glm::vec3(0.0, 0.1, 0.0) ;
+			cameraPosition = cameraPosition + glm::vec3(0.0, 0.1, 0.0) ;
 			lookAt(glm::vec3(0.0,0.0,0.0));
 	}
 		else if (event.key.keysym.sym == SDLK_b)                           // moving cameara backward
@@ -1312,6 +1325,7 @@ int main(int argc, char *argv[])
 
 
 		case 7:                   //week6 Task6
+		window.clearPixels();
 		if(AnimationSwitch){
 			lookAt(glm::vec3(0.0,0.0,0.0));
 		drawWithRayTracing(window, ModelTriangleList) ;
